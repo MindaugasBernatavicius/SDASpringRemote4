@@ -3,6 +3,7 @@ package cf.mindaugas.springremote4api.controllers;
 import cf.mindaugas.springremote4api.models.Product;
 import cf.mindaugas.springremote4api.repositories.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -83,7 +84,8 @@ class ProductController {
     private ProductRepository productRepository;
 
     @GetMapping("") // GET all products
-    public Iterable<Product> getAllProducts(@PathVariable String sortingOrder) {
+    // public Iterable<Product> getAllProducts(@PathVariable(required = false) String sortingOrder) {
+    public Iterable<Product> getAllProducts(@RequestParam(required = false) String sortField) {
         // return productRepository.findAll();
         // return productRepository.findByOrderByRatingDesc();
         // return productRepository.findByOrderByTitleAscAndOrderByRatingDesc();
@@ -91,10 +93,10 @@ class ProductController {
         // return productRepository.findAllProducts();
         // return productRepository.findAll(Sort.by(Sort.Direction.DESC, "rating"));
 
-        return productRepository.findAll(Sort.by(List.of(
-                new Order(Sort.Direction.DESC, "rating"),
-                new Order(Sort.Direction.ASC, "title")
-        )));
+        // http://localhost:8080/api/v1/products?sort=title
+        return sortField != null
+                ? productRepository.findAll(Sort.by(List.of(new Order(Sort.Direction.DESC, sortField))))
+                : productRepository.findAll();
     }
 
     @GetMapping("/{id}") // GET product by id
@@ -107,5 +109,30 @@ class ProductController {
     public ResponseEntity<Void> createProduct(@RequestBody Product product) {
         productRepository.save(product);
         return new ResponseEntity<>(HttpStatus.CREATED);
+    }
+
+    @PutMapping("") // PUT replace existing product
+    public ResponseEntity<Void> updateProduct(@RequestBody Product product) {
+        // System.out.println(product);
+        Product productToUpdate = productRepository
+                    .findById(product.getId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        productToUpdate.setPrice(product.getPrice());
+        productToUpdate.setCount(product.getCount());
+        productToUpdate.setRating(product.getRating());
+        productToUpdate.setTitle(product.getTitle());
+        productRepository.save(productToUpdate);
+        return new ResponseEntity<>(HttpStatus.OK); // 200
+    }
+
+    @DeleteMapping("/{id}") // DELETE product
+    public ResponseEntity<Void> deleteProductById(@PathVariable Long id) {
+        try {
+            this.productRepository.deleteById(id);
+        } catch (EmptyResultDataAccessException e) {
+            // e.printStackTrace(); // normally, we should not silence the errors!
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND); // 404
+        }
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT); // 204
     }
 }

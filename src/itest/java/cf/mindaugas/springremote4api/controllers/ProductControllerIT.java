@@ -7,6 +7,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.http.*;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -14,6 +15,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+// @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 public class ProductControllerIT {
 
     @LocalServerPort
@@ -65,5 +67,15 @@ public class ProductControllerIT {
         ResponseEntity<String> productRetrievedById = rt.getForEntity(url + "/5", String.class);
         String expectedResult = "{\"id\":5,\"title\":\"Pobieda2\",\"count\":666,\"price\":666.99,\"rating\":3.75}";
         assertThat(productRetrievedById.getBody(), equalTo(expectedResult));
+    }
+
+    @Test
+    public void deleteProduct_whenNonExistingIDPassed_returns404(){
+        // given
+        String url = "/api/v1/products/99999";
+        // when
+        ResponseEntity<String> response = rt.exchange(url, HttpMethod.DELETE, null, String.class);
+        // assert
+        assertThat(response.getStatusCode(), equalTo(HttpStatus.NOT_FOUND));
     }
 }
